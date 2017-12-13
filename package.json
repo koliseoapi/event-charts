@@ -1,0 +1,39 @@
+{
+  "name": "data-is-fun",
+  "version": "0.0.1",
+  "description": "A playground for data visualizations",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/koliseoapi/data-is-fun.git"
+  },
+  "authors": [
+    "Carlos Coloma <ccescribano@gmail.com>",
+    "Nacho Coloma <icoloma@gmail.com>"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "d3": "^4.12.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0-beta.35",
+    "@babel/preset-env": "^7.0.0-beta.35",
+    "@babel/register": "^7.0.0-beta.35",
+    "babel-loader": "^8.0.0-beta.0",
+    "babel-register": "^6.26.0",
+    "concurrently": "^3.5.1",
+    "fs-promise": "^2.0.3",
+    "http-server": "^0.10.0",
+    "jsdom": "^11.5.1",
+    "jsdom-global": "^3.0.2",
+    "mocha": "^4.0.1",
+    "webpack": "^3.10.0"
+  },
+  "scripts": {
+    "test": "mocha --compilers js:@babel/register test/*Test.js",
+    "postversion": "git push && git push --tags",
+    "watch:js": "NODE_ENV=development webpack --watch --config webpack.config.js",
+    "watch": "concurrently \"npm run watch:js\" \"http-server -s -c-1 --cors .\" \"xdg-open http://127.0.0.1:8080/test-page/\"",
+    "build": "NODE_ENV=production webpack --optimize-minimize --config webpack.config.js"
+  }
+}
