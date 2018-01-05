@@ -44,5 +44,5 @@ function renderChart() {
   })
 }
 
-yearSelect.addEventListener('change', renderChart());
+yearSelect.addEventListener('change', renderChart);
 renderChart();

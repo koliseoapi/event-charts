@@ -1,6 +1,45 @@
 body {
   font: 10px sans-serif;
 }
+.bar {
+  fill: steelblue;
+}
+.track-1 {
+  fill: red;
+}
+.track-2 {
+  fill: orange;
+}
+.track-3 {
+  fill: yellow;
+}
+.track-4 {
+  fill: steelblue;
+}
+.track-5 {
+  fill: steelblue;
+}
+.track-6 {
+  fill: steelblue;
+}
+.track-7 {
+  fill: steelblue;
+}
+.track-8 {
+  fill: steelblue;
+}
+.track-9 {
+  fill: steelblue;
+}
+.track-a {
+  fill: steelblue;
+}
+.track-b {
+  fill: steelblue;
+}
+.track-c {
+  fill: steelblue;
+}
 
 
 
@@ -15,9 +54,6 @@ body {
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
-}
-.bar1 {
-  fill: steelblue;
 }
 .bar2 {
   fill: orange;

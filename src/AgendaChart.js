@@ -9,9 +9,6 @@ function createLabel(dayName, trackName, start) {
   return `${dayName}-${start}-${trackName}`;
 }
 
-// height of each bar, in pixels
-const BAR_HEIGHT = 20;
-
 export default class AgendaChart {
 
   constructor({ 
@@ -19,17 +16,29 @@ export default class AgendaChart {
     selector,
 
     // width of the chart, in pixels
-    width = 600
+    width = 600,
+
+    // height of the bar, in pixels
+    barHeight = 40,
+
+    // margin of the chart (inside the width)
+    margin = { top: 80, right: 80, bottom: 80, left: 80 },
+
+    // property value to display. Possible values are "likes" or "feedback"
+    propertyName = "likes"
   }) {
     this.svg = select(selector);
     this.width = width;
+    this.barHeight = barHeight;
+    this.margin = margin;
+    this.propertyName = propertyName;
   }
 
   // proces the agenda and return something that can be used to render the chart
   // return
   // maxLikes: (int) the maximum number of likes or feedback in the agenda
   // slotLabels: (array of String) the list of labels to display in the chart
-  // slots: (array of { label, totalLikes, totalFeedback, authors }) the array of slots to display
+  // slots: (array of { label, value, authors }) the array of slots to display
   processAgenda(agenda) {
     let maxLikes = 0;
     let slotLabels = [];
@@ -40,9 +49,15 @@ export default class AgendaChart {
           if (type == 'TALK') {
             const totalFeedback = feedback && feedback.entriesCount || 0;
             const label = createLabel(dayName, trackName, start);
-            maxLikes = Math.max(maxLikes, totalLikes, totalFeedback)
+            const value = this.propertyName == 'likes' ? totalLikes : totalFeedback;
+            maxLikes = Math.max(maxLikes, value)
             slotLabels.push(label)
-            mySlots.push({ label, totalLikes, totalFeedback, authors });
+            mySlots.push({ 
+              label, 
+              value, 
+              authors,
+              trackName
+            });
           }
         })
       })
@@ -57,18 +72,19 @@ export default class AgendaChart {
     return {
       maxLikes,
       slotLabels,
-      slots: mySlots
+      slots: mySlots,
+      totalHeight: mySlots.length * this.barHeight
     };
   }
   
-  createScale({ maxLikes, slotLabels }) {
+  createScale({ maxLikes, slotLabels, totalHeight }) {
     const x = scaleLinear()
       .domain([0, maxLikes])
       .range([0, this.width]);
     const y = scaleBand()
-      .range([0, BAR_HEIGHT + slotLabels.length])
+      .rangeRound([0, totalHeight])
       .domain(slotLabels)
-      .padding(.1);
+      .paddingInner(.1);
     return { x, y };
   }
 
@@ -108,26 +124,20 @@ export default class AgendaChart {
       .data(slots)
       .enter();
     bars.append("rect")
-      .attr("class", "bar1")
+      .attr("class", ({ trackName }) => `bar ${trackName.toLowerCase().replace(/\s/, '-')}`)
       .attr("x", 0)
-      .attr("height", y.bandwidth() / 2)
-      .attr("y", function ({ label }) { return y(label); })
-      .attr("width", function ({ totalLikes }) { return x(totalLikes); });
-      /*
-    bars.append("rect")
-      .attr("class", "bar2")
-      .attr("x", function (d) { return x(d.year) + x.rangeBand() / 2; })
-      .attr("width", x.rangeBand() / 2)
-      .attr("y", function (d) { return y1(d.number); })
-      .attr("height", function (d, i, j) { return height - y1(d.number); });
-      */
+      .attr("height", y.bandwidth())
+      .attr("y", ({ label }) => y(label))
+      .attr("width", ({ value }) => x(value));
   }
 
-  render(agendaJSON) {
-    const agenda = this.processAgenda(agendaJSON);
-    const svg = this.svg;
+  render(agendaJSON, propertyName) {
+    const agenda = this.processAgenda(agendaJSON, propertyName);
     const { x, y } = this.createScale(agenda);
     this.clear();
+    this.svg
+      .attr('width', this.width)
+      .attr('height', agenda.totalHeight);
     this.renderAxis(x, y);
     this.renderBars(agenda, x, y);
     /*

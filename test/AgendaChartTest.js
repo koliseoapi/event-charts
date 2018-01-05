@@ -12,6 +12,7 @@ describe('AgendaChart', () => {
 
   beforeEach(() => {
     jsdom = new JSDOM('<html><body><svg></svg></body></html>');
+    global.document = jsdom.window.document;
     chart = new AgendaChart('svg');
     return fsp.readFile(path.resolve('./test-page/local-codemotion.json'))
       .then(contents => {
@@ -20,7 +21,7 @@ describe('AgendaChart', () => {
   });
 
   it('processses the agenda correctly', () => {
-    const { maxLikes, slotLabels, slots } = chart.processAgenda(agenda);
+    const { maxLikes, slotLabels, slots, totalHeight } = chart.processAgenda(agenda);
 
     // x axis
     assert.equal(325, maxLikes);
@@ -34,15 +35,19 @@ describe('AgendaChart', () => {
     
     // slots
     assert.equal(150, slots.length);
-    const { label, totalLikes, totalFeedback, authors } = slots[0];
+    const { label, value, authors } = slots[0];
     assert.equal('24 november-09:00-Track 1', label);
-    assert.equal(38, totalLikes);
-    assert.equal(7, totalFeedback);
+    assert.equal(38, value);
     assert.equal(4, authors.length);
+
+    // totalHeight
+    assert(totalHeight > 100);
   });
 
   it('renders correctly', () => {
     chart.render(agenda);
+    assert.equal(10, document.querySelectorAll('.bar').length);
+    assert.equal('kk', document.querySelector('.bar.track-1'));
   });
 
 });
