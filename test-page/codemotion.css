@@ -1,47 +1,21 @@
+@import url(https://fonts.googleapis.com/css?family=Raleway:900,600,500,800,700);
+
 body {
-  font: 10px sans-serif;
+  font: 16px sans-serif;
+  font-display: swap;
 }
 .bar {
   fill: steelblue;
 }
-.track-1 {
+.bar.hot {
   fill: red;
 }
-.track-2 {
+.bar.warm {
   fill: orange;
 }
-.track-3 {
-  fill: yellow;
+.bar.cold {
+  fill: gray;
 }
-.track-4 {
-  fill: steelblue;
-}
-.track-5 {
-  fill: steelblue;
-}
-.track-6 {
-  fill: steelblue;
-}
-.track-7 {
-  fill: steelblue;
-}
-.track-8 {
-  fill: steelblue;
-}
-.track-9 {
-  fill: steelblue;
-}
-.track-a {
-  fill: steelblue;
-}
-.track-b {
-  fill: steelblue;
-}
-.track-c {
-  fill: steelblue;
-}
-
-
 
 .y.axisRight text {
     fill: orange;
@@ -60,4 +34,12 @@ body {
 }
 .x.axis path {
   display: none;
+}
+
+.bar-label {
+  font-family: Raleway, sans-serif;
+  font-size: 1rem;
+  fill: black;
+  text-transform: uppercase;
+  font-weight: 8200;
 }

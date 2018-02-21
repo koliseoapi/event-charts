@@ -41,22 +41,24 @@ export default class AgendaChart {
   // slots: (array of { label, value, authors }) the array of slots to display
   processAgenda(agenda) {
     let maxLikes = 0;
+    let maxFeedback = 0;
     let slotLabels = [];
     let mySlots = [];
     agenda.days.forEach(({ name: dayName, tracks }) => {
       tracks.forEach(({ name: trackName, slots }) => {
-        slots.forEach(({ start, contents: { type, totalLikes, feedback, authors } = {} }) => {
+        slots.forEach(({ start, contents: { type, title, totalLikes, feedback, authors } = {} }) => {
           if (type == 'TALK') {
             const totalFeedback = feedback && feedback.entriesCount || 0;
             const label = createLabel(dayName, trackName, start);
-            const value = this.propertyName == 'likes' ? totalLikes : totalFeedback;
-            maxLikes = Math.max(maxLikes, value)
+            maxLikes = Math.max(maxLikes, totalLikes)
+            maxFeedback = Math.max(maxFeedback, totalFeedback);
             slotLabels.push(label)
             mySlots.push({ 
               label, 
               value, 
               authors,
-              trackName
+              trackName, 
+              title
             });
           }
         })
@@ -120,15 +122,49 @@ export default class AgendaChart {
 
   renderBars({ slots }, x, y) {
     const bars = this.svg
+      .append("g")
+      .attr("class", "bars")
       .selectAll(".bar")
       .data(slots)
       .enter();
     bars.append("rect")
       .attr("class", ({ trackName }) => `bar ${trackName.toLowerCase().replace(/\s/, '-')}`)
       .attr("x", 0)
-      .attr("height", y.bandwidth())
       .attr("y", ({ label }) => y(label))
-      .attr("width", ({ value }) => x(value));
+      .attr("height", y.bandwidth())
+      .attr("width", ({ value }) => x(value))
+    ;
+  }
+
+  renderLabels({ slots }, x, y) {
+    // Ellipsis on long text: https://stackoverflow.com/questions/15975440/add-ellipses-to-overflowing-text-in-svg
+    function wrap() {
+      var self = select(this),
+        textLength = self.node().getComputedTextLength(),
+        text = self.text();
+      while (textLength > this.width && text.length > 0) {
+        text = text.slice(0, -1);
+        self.text(text + '\u2026');
+        textLength = self.node().getComputedTextLength();
+      }
+    } 
+
+    const labels = this.svg
+      .append("g")
+      .attr("class", "labels")
+      .selectAll(".bar-label")
+      .data(slots)
+      .enter();
+    labels.append("text")
+      .attr("x", 0)
+      .attr("dx", "1rem")
+      .attr("y", ({ label }) => y(label) + y.bandwidth() / 2)
+      .style("text-anchor", "start")
+      .attr("class", "bar-label")
+      .attr("alignment-baseline", "middle")
+      .text(({trackName, title}) => `${trackName}: ${title}` )
+      .each(wrap)
+      ;
   }
 
   render(agendaJSON, propertyName) {
@@ -140,6 +176,7 @@ export default class AgendaChart {
       .attr('height', agenda.totalHeight);
     this.renderAxis(x, y);
     this.renderBars(agenda, x, y);
+    this.renderLabels(agenda, x, y);
     /*
     svg
       .attr('width', this.width)
