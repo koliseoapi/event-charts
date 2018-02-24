@@ -17,6 +17,7 @@ const LABEL_HEIGHT = 16;
 const LABEL_MARGIN_TOP = 10;
 const LABEL_MARGIN_LEFT = 16;
 const LABEL_MARGIN_BOTTOM = 5;
+const AVATAR_WIDTH = 80;
 
 export default class AgendaChart {
 
@@ -56,7 +57,8 @@ export default class AgendaChart {
               feedback: totalFeedback, 
               authors,
               trackName, 
-              title
+              title,
+              start
             });
           }
         })
@@ -121,8 +123,7 @@ export default class AgendaChart {
   }
 
   renderLabels({
-    talkContainer,
-    y
+    talkContainer
   }) {
     // Ellipsis on long text: https://stackoverflow.com/questions/15975440/add-ellipses-to-overflowing-text-in-svg
     function wrap() {
@@ -142,6 +143,33 @@ export default class AgendaChart {
       .style("dominant-baseline", "middle")
       .attr("class", "talk-title")
       .text(({ trackName, title }) => `${trackName}: ${title}`);
+  }
+
+  renderAvatars({
+    talkContainer,
+  }) {
+    const avatars = talkContainer.append("g")
+      .attr("class", "avatars")
+      .selectAll('avatar')
+      .data(({ authors }) => authors)
+      .enter()
+    ;
+    avatars.append("image")
+      .attr("x", 0)
+      .attr("y", 0)
+      //.attr("x", -AVATAR_WIDTH/2)
+      //.attr("y", LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM)
+      .attr("width", AVATAR_WIDTH)
+      .attr("height", AVATAR_WIDTH)
+      .attr("class", "avatar")
+      .attr("xlink:href", ({ avatar }) => avatar)
+      .attr("clip-path", "url(#avatar-clip)")
+      .attr("transform", `translate(${-AVATAR_WIDTH / 2}, ${LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM})`)
+      .style("dominant-baseline", "middle")
+      .append('title')
+      .text(({ name }) => name)
+    ;
+
   }
 
   renderBars({ 
@@ -206,6 +234,7 @@ export default class AgendaChart {
       yOffset: LABEL_MARGIN_TOP + LABEL_HEIGHT + BAR_HEIGHT,
       propertyName: 'feedback' 
     });
+    this.renderAvatars({ talkContainer })
   }
 
   renderRootContainer({ slots }) {
@@ -218,18 +247,34 @@ export default class AgendaChart {
     return bars;
   }
 
+  appendDefs() {
+    const avatarRadius = AVATAR_WIDTH / 2;
+    const defs = this.svg.append("defs");
+    defs.append("clipPath")
+      .attr("id", "avatar-clip")
+      .append("circle")
+      .attr("cx", avatarRadius)
+      .attr("cy", avatarRadius)
+      .attr("r", avatarRadius)
+
+
+  }
+
   render(agendaJSON, propertyName) {
     const agenda = this.processAgenda(agendaJSON, propertyName);
     const { xLikes, xFeedback, y } = this.createScale(agenda);
     this.clear();
-    this.chart = this.svg
+    this.svg
       .attr('width', this.width - 2 * CHART_MARGIN)
-      .attr('height', agenda.totalHeight )
-      .append('g')
+      .attr('height', agenda.totalHeight)
+    ;
+
+    this.chart = this.svg.append('g')
       .attr('class', 'chart')
       .attr("transform", `translate(${CHART_MARGIN},${CHART_MARGIN})`)
     ;
-
+    
+    this.appendDefs();
     this.renderAxis(xLikes, y);
     const rootContainer = this.renderRootContainer(agenda);
     this.renderTalks({
