@@ -15,9 +15,14 @@ const BAR_MARGIN_BOTTOM = 10;
 const BAR_MARGIN_RIGHT = 10;
 const LABEL_HEIGHT = 16;
 const LABEL_MARGIN_TOP = 10;
-const LABEL_MARGIN_LEFT = 16;
+//const LABEL_MARGIN_LEFT = 16;
 const LABEL_MARGIN_BOTTOM = 5;
 const AVATAR_WIDTH = 80;
+const TOTAL_TALK_HEIGHT = (
+  LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM +
+  BAR_HEIGHT * 2 +
+  BAR_MARGIN_BOTTOM
+);
 
 export default class AgendaChart {
 
@@ -76,11 +81,7 @@ export default class AgendaChart {
       maxFeedback,
       slotLabels,
       slots: mySlots,
-      totalHeight: mySlots.length * (
-        LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM + 
-        BAR_HEIGHT * 2 +
-        BAR_MARGIN_BOTTOM
-      )
+      totalHeight: mySlots.length * TOTAL_TALK_HEIGHT
     };
   }
   
@@ -91,11 +92,7 @@ export default class AgendaChart {
     const xFeedback = scaleLinear()
       .domain([0, maxFeedback])
       .range([0, this.width]);
-    const y = scaleBand()
-      .rangeRound([0, totalHeight])
-      .domain(slotLabels)
-      .paddingInner(.1);
-    return { xLikes, xFeedback, y };
+    return { xLikes, xFeedback };
   }
 
   clear() {
@@ -104,22 +101,7 @@ export default class AgendaChart {
       .remove();
   }
 
-  renderAxis(x, y) {
-    const yAxis = axisLeft()
-      .scale(y)
-    ;
-    this.chart.append("g")
-      .attr("class", "y axis axisLeft")
-      //.attr("transform", "translate(0,0)")
-      .call(yAxis)
-      /*
-      .append("text")
-      .attr("y", 6)
-      .attr("dy", "-2em")
-      .style("text-anchor", "end")
-      .style("text-anchor", "end")
-      .text("Dollars");
-*/
+  renderAxis() {
   }
 
   renderLabels({
@@ -138,11 +120,11 @@ export default class AgendaChart {
     } 
 
     talkContainer.append("text")
-      .attr("x", LABEL_MARGIN_LEFT)
+      .attr("x", 0)
       .attr("y", LABEL_MARGIN_TOP)
       .style("dominant-baseline", "middle")
       .attr("class", "talk-title")
-      .text(({ trackName, title }) => `${trackName}: ${title}`);
+      .text(({ trackName, start, title }) => `${trackName} / ${start} / ${title}`);
   }
 
   renderAvatars({
@@ -150,6 +132,8 @@ export default class AgendaChart {
   }) {
     const avatars = talkContainer.append("g")
       .attr("class", "avatars")
+      .attr("transform", `translate(${- AVATAR_WIDTH}, ${TOTAL_TALK_HEIGHT / 2})`)
+      .style("dominant-baseline", "middle")
       .selectAll('avatar')
       .data(({ authors }) => authors)
       .enter()
@@ -157,15 +141,11 @@ export default class AgendaChart {
     avatars.append("image")
       .attr("x", 0)
       .attr("y", 0)
-      //.attr("x", -AVATAR_WIDTH/2)
-      //.attr("y", LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM)
       .attr("width", AVATAR_WIDTH)
       .attr("height", AVATAR_WIDTH)
       .attr("class", "avatar")
       .attr("xlink:href", ({ avatar }) => avatar)
       .attr("clip-path", "url(#avatar-clip)")
-      .attr("transform", `translate(${-AVATAR_WIDTH / 2}, ${LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM})`)
-      .style("dominant-baseline", "middle")
       .append('title')
       .text(({ name }) => name)
     ;
@@ -212,12 +192,11 @@ export default class AgendaChart {
     agenda,
     rootContainer,
     xLikes,
-    xFeedback,
-    y
+    xFeedback
   }) {
     const talkContainer = rootContainer.append("g")
       .attr("class", "talk-container")
-      .attr("transform", ({ label }) => `translate(0, ${y(label)})`)
+      .attr("transform", ({ label }, index) => `translate(0, ${index * TOTAL_TALK_HEIGHT})`)
     ;
     this.renderLabels({ talkContainer })
     this.renderBars({ 
@@ -275,7 +254,7 @@ export default class AgendaChart {
     ;
     
     this.appendDefs();
-    this.renderAxis(xLikes, y);
+    this.renderAxis();
     const rootContainer = this.renderRootContainer(agenda);
     this.renderTalks({
       agenda,
