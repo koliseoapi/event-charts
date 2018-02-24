@@ -22,16 +22,12 @@ export default class AgendaChart {
     barHeight = 40,
 
     // margin of the chart (inside the width)
-    margin = { top: 80, right: 80, bottom: 80, left: 80 },
-
-    // property value to display. Possible values are "likes" or "feedback"
-    propertyName = "likes"
+    margin = { top: 80, right: 80, bottom: 80, left: 80 }
   }) {
     this.svg = select(selector);
     this.width = width;
     this.barHeight = barHeight;
     this.margin = margin;
-    this.propertyName = propertyName;
   }
 
   // proces the agenda and return something that can be used to render the chart
@@ -55,7 +51,8 @@ export default class AgendaChart {
             slotLabels.push(label)
             mySlots.push({ 
               label, 
-              value, 
+              likes: totalLikes,
+              feedback: totalFeedback, 
               authors,
               trackName, 
               title
@@ -73,21 +70,25 @@ export default class AgendaChart {
     );
     return {
       maxLikes,
+      maxFeedback,
       slotLabels,
       slots: mySlots,
       totalHeight: mySlots.length * this.barHeight
     };
   }
   
-  createScale({ maxLikes, slotLabels, totalHeight }) {
-    const x = scaleLinear()
+  createScale({ maxLikes, maxFeedback, slotLabels, totalHeight }) {
+    const xLikes = scaleLinear()
       .domain([0, maxLikes])
+      .range([0, this.width]);
+    const xFeedback = scaleLinear()
+      .domain([0, maxFeedback])
       .range([0, this.width]);
     const y = scaleBand()
       .rangeRound([0, totalHeight])
       .domain(slotLabels)
       .paddingInner(.1);
-    return { x, y };
+    return { xLikes, xFeedback, y };
   }
 
   clear() {
@@ -120,7 +121,15 @@ export default class AgendaChart {
 */
   }
 
-  renderBars({ slots }, x, y) {
+  renderBars({ 
+    agenda: { slots }, 
+    x, 
+    y,
+    // one of: ['likes', 'feedback'] to render one bar or the other
+    propertyName
+  }) {
+    const bandHeight = y.bandwidth() / 2;
+    const xMax = x.domain()[1];
     const bars = this.svg
       .append("g")
       .attr("class", "bars")
@@ -128,11 +137,23 @@ export default class AgendaChart {
       .data(slots)
       .enter();
     bars.append("rect")
-      .attr("class", ({ trackName }) => `bar ${trackName.toLowerCase().replace(/\s/, '-')}`)
+      .attr("class", slot => {
+        const value = slot[propertyName];
+        const barClass = 
+          value > xMax * .8 ? 'hot' :
+          value > xMax * .6 ? 'warm' :
+          value < xMax * .2 ? 'cold' :
+          ''
+        ;
+
+        return `bar ${barClass}`
+      })
       .attr("x", 0)
-      .attr("y", ({ label }) => y(label))
-      .attr("height", y.bandwidth())
-      .attr("width", ({ value }) => x(value))
+      .attr("y", ({ label }) => (y(label) + (propertyName == "likes"? 0 : bandHeight)))
+      .attr("height", bandHeight)
+      .attr("width", slot => x(slot[propertyName]))
+      .append("svg:title")
+      .text(() => "TODO: title");
     ;
   }
 
@@ -169,14 +190,15 @@ export default class AgendaChart {
 
   render(agendaJSON, propertyName) {
     const agenda = this.processAgenda(agendaJSON, propertyName);
-    const { x, y } = this.createScale(agenda);
+    const { xLikes, xFeedback, y } = this.createScale(agenda);
     this.clear();
     this.svg
       .attr('width', this.width)
       .attr('height', agenda.totalHeight);
-    this.renderAxis(x, y);
-    this.renderBars(agenda, x, y);
-    this.renderLabels(agenda, x, y);
+    this.renderAxis(xLikes, y);
+    this.renderBars({ agenda, x: xLikes, y, propertyName: 'likes' });
+    this.renderBars({ agenda, x: xFeedback, y, propertyName: 'feedback' });
+    this.renderLabels(agenda, xLikes, y);
     /*
     svg
       .attr('width', this.width)
@@ -189,58 +211,3 @@ export default class AgendaChart {
 
   }
 }
-
-/*
-var svg = select("body").append("svg")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-  .attr("class", "graph")
-d3.tsv("data.tsv", type, function (error, data) {
-  x.domain(data.map(function (d) { return d.year; }));
-  y0.domain([0, d3.max(data, function (d) { return d.money; })]);
-
-  svg.append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
-    .call(xAxis);
-  svg.append("g")
-    .attr("class", "y axis axisLeft")
-    .attr("transform", "translate(0,0)")
-    .call(yAxisLeft)
-    .append("text")
-    .attr("y", 6)
-    .attr("dy", "-2em")
-    .style("text-anchor", "end")
-    .style("text-anchor", "end")
-    .text("Dollars");
-
-  svg.append("g")
-    .attr("class", "y axis axisRight")
-    .attr("transform", "translate(" + (width) + ",0)")
-    .call(yAxisRight)
-    .append("text")
-    .attr("y", 6)
-    .attr("dy", "-2em")
-    .attr("dx", "2em")
-    .style("text-anchor", "end")
-    .text("#");
-  bars = svg.selectAll(".bar").data(data).enter();
-  bars.append("rect")
-    .attr("class", "bar1")
-    .attr("x", function (d) { return x(d.year); })
-    .attr("width", x.rangeBand() / 2)
-    .attr("y", function (d) { return y0(d.money); })
-    .attr("height", function (d, i, j) { return height - y0(d.money); });
-  bars.append("rect")
-    .attr("class", "bar2")
-    .attr("x", function (d) { return x(d.year) + x.rangeBand() / 2; })
-    .attr("width", x.rangeBand() / 2)
-    .attr("y", function (d) { return y1(d.number); })
-    .attr("height", function (d, i, j) { return height - y1(d.number); });
-});
-function type(d) {
-  d.money = +d.money;
-  return d;
-}
-*/
