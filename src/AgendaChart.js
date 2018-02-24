@@ -9,25 +9,26 @@ function createLabel(dayName, trackName, start) {
   return `${dayName}-${start}-${trackName}`;
 }
 
+const CHART_MARGIN = 80;
+const BAR_HEIGHT = 20;
+const BAR_MARGIN_BOTTOM = 10;
+const BAR_MARGIN_RIGHT = 10;
+const LABEL_HEIGHT = 16;
+const LABEL_MARGIN_TOP = 10;
+const LABEL_MARGIN_LEFT = 16;
+const LABEL_MARGIN_BOTTOM = 5;
+
 export default class AgendaChart {
 
   constructor({ 
-    // selector to find the SVG where we sill render the chart
+    // selector to find the SVG where the component will render
     selector,
 
     // width of the chart, in pixels
     width = 600,
-
-    // height of the bar, in pixels
-    barHeight = 40,
-
-    // margin of the chart (inside the width)
-    margin = { top: 80, right: 80, bottom: 80, left: 80 }
   }) {
     this.svg = select(selector);
     this.width = width;
-    this.barHeight = barHeight;
-    this.margin = margin;
   }
 
   // proces the agenda and return something that can be used to render the chart
@@ -73,7 +74,11 @@ export default class AgendaChart {
       maxFeedback,
       slotLabels,
       slots: mySlots,
-      totalHeight: mySlots.length * this.barHeight
+      totalHeight: mySlots.length * (
+        LABEL_MARGIN_TOP + LABEL_HEIGHT + LABEL_MARGIN_BOTTOM + 
+        BAR_HEIGHT * 2 +
+        BAR_MARGIN_BOTTOM
+      )
     };
   }
   
@@ -98,16 +103,10 @@ export default class AgendaChart {
   }
 
   renderAxis(x, y) {
-    const xAxis = axisTop()
-      .scale(x)
-      .ticks(4);
     const yAxis = axisLeft()
-      .scale(y);
-    this.svg.append("g")
-      .attr("class", "x axis")
-      //.attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
-    this.svg.append("g")
+      .scale(y)
+    ;
+    this.chart.append("g")
       .attr("class", "y axis axisLeft")
       //.attr("transform", "translate(0,0)")
       .call(yAxis)
@@ -138,12 +137,10 @@ export default class AgendaChart {
     } 
 
     talkContainer.append("text")
-      .attr("x", 0)
-      .attr("dx", "1rem")
-      .attr("y", ({ label }) => y(label) + y.bandwidth() / 2)
-      .style("text-anchor", "start")
-      .attr("class", "bar-label")
-      .attr("alignment-baseline", "middle")
+      .attr("x", LABEL_MARGIN_LEFT)
+      .attr("y", LABEL_MARGIN_TOP)
+      .style("dominant-baseline", "middle")
+      .attr("class", "talk-title")
       .text(({ trackName, title }) => `${trackName}: ${title}`);
   }
 
@@ -151,12 +148,11 @@ export default class AgendaChart {
     talkContainer,
     agenda: { slots }, 
     x, 
-    y,
+    yOffset,
     // one of: ['likes', 'feedback'] to render one bar or the other
     propertyName
   }) {
     const xMax = x.domain()[1];
-    const bandHeight = y.bandwidth() / 2;
     talkContainer.append("rect")
       .attr("class", slot => {
         const value = slot[propertyName];
@@ -170,11 +166,17 @@ export default class AgendaChart {
         return `talk-bar ${barClass}`
       })
       .attr("x", 0)
-      .attr("y", ({ label }) => (y(label) + (propertyName == "likes"? 0 : bandHeight)))
-      .attr("height", bandHeight)
+      .attr("y", yOffset)
+      .attr("height", BAR_HEIGHT)
       .attr("width", slot => x(slot[propertyName]))
       .append("svg:title")
-      .text(() => "TODO: title");
+    ;
+    talkContainer.append("text")
+      .attr("class", "talk-bar-caption")
+      .attr("x", slot => x(slot[propertyName]) + BAR_MARGIN_RIGHT)
+      .attr("y", yOffset + BAR_HEIGHT / 2)
+      .style("dominant-baseline", "middle")
+      .text((slot) => `${slot[propertyName]} ${propertyName == 'likes'? 'likes' : 'feedback entries'}`)
     ;
   }
 
@@ -187,15 +189,27 @@ export default class AgendaChart {
   }) {
     const talkContainer = rootContainer.append("g")
       .attr("class", "talk-container")
-      //.data(slots)
-      //.enter();
-    this.renderLabels({ talkContainer, y })
-    this.renderBars({ talkContainer, agenda, x: xLikes, y, propertyName: 'likes' });
-    this.renderBars({ talkContainer, agenda, x: xFeedback, y, propertyName: 'feedback' });
+      .attr("transform", ({ label }) => `translate(0, ${y(label)})`)
+    ;
+    this.renderLabels({ talkContainer })
+    this.renderBars({ 
+      talkContainer, 
+      agenda, 
+      x: xLikes, 
+      yOffset: LABEL_MARGIN_TOP + LABEL_HEIGHT,
+      propertyName: 'likes' 
+    });
+    this.renderBars({ 
+      talkContainer, 
+      agenda, 
+      x: xFeedback, 
+      yOffset: LABEL_MARGIN_TOP + LABEL_HEIGHT + BAR_HEIGHT,
+      propertyName: 'feedback' 
+    });
   }
 
   renderRootContainer({ slots }) {
-    const bars = this.svg
+    const bars = this.chart
       .append("g")
       .attr("class", "talks")
       .selectAll(".talk-container")
@@ -208,9 +222,14 @@ export default class AgendaChart {
     const agenda = this.processAgenda(agendaJSON, propertyName);
     const { xLikes, xFeedback, y } = this.createScale(agenda);
     this.clear();
-    this.svg
-      .attr('width', this.width)
-      .attr('height', agenda.totalHeight);
+    this.chart = this.svg
+      .attr('width', this.width - 2 * CHART_MARGIN)
+      .attr('height', agenda.totalHeight )
+      .append('g')
+      .attr('class', 'chart')
+      .attr("transform", `translate(${CHART_MARGIN},${CHART_MARGIN})`)
+    ;
+
     this.renderAxis(xLikes, y);
     const rootContainer = this.renderRootContainer(agenda);
     this.renderTalks({
@@ -220,14 +239,6 @@ export default class AgendaChart {
       xFeedback,
       y
     })
-    /*
-    svg
-      .attr('width', this.width)
-      .attr('height', slotLabels.length * BAR_HEIGHT)
-      .append('g')
-      .attr('class', 'graph')
-      //.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-      */
 
 
   }

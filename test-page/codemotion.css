@@ -1,4 +1,4 @@
-@import url(https://fonts.googleapis.com/css?family=Raleway:900,600,500,800,700);
+@import url(https://fonts.googleapis.com/css?family=Raleway:900,800,700,600,500,400);
 
 body {
   font: 16px sans-serif;
@@ -36,10 +36,17 @@ body {
   display: none;
 }
 
-.talk-label {
+.talk-title {
   font-family: Raleway, sans-serif;
-  font-size: 1rem;
+  font-size: 16px;
   fill: black;
   text-transform: uppercase;
-  font-weight: 8200;
+  font-weight: 800;
+}
+
+.talk-bar-caption {
+  font-family: Raleway, sans-serif;
+  font-size: 12px;
+  fill: #888;
+  font-weight: 400;  
 }
