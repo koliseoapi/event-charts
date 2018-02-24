@@ -4,16 +4,16 @@ body {
   font: 16px sans-serif;
   font-display: swap;
 }
-.bar {
+.talk-bar {
   fill: steelblue;
 }
-.bar.hot {
+.talk-bar.hot {
   fill: red;
 }
-.bar.warm {
+.talk-bar.warm {
   fill: orange;
 }
-.bar.cold {
+.talk-bar.cold {
   fill: gray;
 }
 
@@ -36,7 +36,7 @@ body {
   display: none;
 }
 
-.bar-label {
+.talk-label {
   font-family: Raleway, sans-serif;
   font-size: 1rem;
   fill: black;

@@ -121,43 +121,10 @@ export default class AgendaChart {
 */
   }
 
-  renderBars({ 
-    agenda: { slots }, 
-    x, 
-    y,
-    // one of: ['likes', 'feedback'] to render one bar or the other
-    propertyName
+  renderLabels({
+    talkContainer,
+    y
   }) {
-    const bandHeight = y.bandwidth() / 2;
-    const xMax = x.domain()[1];
-    const bars = this.svg
-      .append("g")
-      .attr("class", "bars")
-      .selectAll(".bar")
-      .data(slots)
-      .enter();
-    bars.append("rect")
-      .attr("class", slot => {
-        const value = slot[propertyName];
-        const barClass = 
-          value > xMax * .8 ? 'hot' :
-          value > xMax * .6 ? 'warm' :
-          value < xMax * .2 ? 'cold' :
-          ''
-        ;
-
-        return `bar ${barClass}`
-      })
-      .attr("x", 0)
-      .attr("y", ({ label }) => (y(label) + (propertyName == "likes"? 0 : bandHeight)))
-      .attr("height", bandHeight)
-      .attr("width", slot => x(slot[propertyName]))
-      .append("svg:title")
-      .text(() => "TODO: title");
-    ;
-  }
-
-  renderLabels({ slots }, x, y) {
     // Ellipsis on long text: https://stackoverflow.com/questions/15975440/add-ellipses-to-overflowing-text-in-svg
     function wrap() {
       var self = select(this),
@@ -170,22 +137,71 @@ export default class AgendaChart {
       }
     } 
 
-    const labels = this.svg
-      .append("g")
-      .attr("class", "labels")
-      .selectAll(".bar-label")
-      .data(slots)
-      .enter();
-    labels.append("text")
+    talkContainer.append("text")
       .attr("x", 0)
       .attr("dx", "1rem")
       .attr("y", ({ label }) => y(label) + y.bandwidth() / 2)
       .style("text-anchor", "start")
       .attr("class", "bar-label")
       .attr("alignment-baseline", "middle")
-      .text(({trackName, title}) => `${trackName}: ${title}` )
-      .each(wrap)
-      ;
+      .text(({ trackName, title }) => `${trackName}: ${title}`);
+  }
+
+  renderBars({ 
+    talkContainer,
+    agenda: { slots }, 
+    x, 
+    y,
+    // one of: ['likes', 'feedback'] to render one bar or the other
+    propertyName
+  }) {
+    const xMax = x.domain()[1];
+    const bandHeight = y.bandwidth() / 2;
+    talkContainer.append("rect")
+      .attr("class", slot => {
+        const value = slot[propertyName];
+        const barClass = 
+          value > xMax * .8 ? 'hot' :
+          value > xMax * .6 ? 'warm' :
+          value < xMax * .2 ? 'cold' :
+          ''
+        ;
+
+        return `talk-bar ${barClass}`
+      })
+      .attr("x", 0)
+      .attr("y", ({ label }) => (y(label) + (propertyName == "likes"? 0 : bandHeight)))
+      .attr("height", bandHeight)
+      .attr("width", slot => x(slot[propertyName]))
+      .append("svg:title")
+      .text(() => "TODO: title");
+    ;
+  }
+
+  renderTalks({
+    agenda,
+    rootContainer,
+    xLikes,
+    xFeedback,
+    y
+  }) {
+    const talkContainer = rootContainer.append("g")
+      .attr("class", "talk-container")
+      //.data(slots)
+      //.enter();
+    this.renderLabels({ talkContainer, y })
+    this.renderBars({ talkContainer, agenda, x: xLikes, y, propertyName: 'likes' });
+    this.renderBars({ talkContainer, agenda, x: xFeedback, y, propertyName: 'feedback' });
+  }
+
+  renderRootContainer({ slots }) {
+    const bars = this.svg
+      .append("g")
+      .attr("class", "talks")
+      .selectAll(".talk-container")
+      .data(slots)
+      .enter();
+    return bars;
   }
 
   render(agendaJSON, propertyName) {
@@ -196,9 +212,14 @@ export default class AgendaChart {
       .attr('width', this.width)
       .attr('height', agenda.totalHeight);
     this.renderAxis(xLikes, y);
-    this.renderBars({ agenda, x: xLikes, y, propertyName: 'likes' });
-    this.renderBars({ agenda, x: xFeedback, y, propertyName: 'feedback' });
-    this.renderLabels(agenda, xLikes, y);
+    const rootContainer = this.renderRootContainer(agenda);
+    this.renderTalks({
+      agenda,
+      rootContainer,
+      xLikes,
+      xFeedback,
+      y
+    })
     /*
     svg
       .attr('width', this.width)
